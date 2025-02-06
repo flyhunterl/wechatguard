@@ -26,18 +26,18 @@ jobs:
         pip install pyinstaller setuptools wheel
     
     - name: Extract version and build time
-      id: get_version
+      id: version_info
       shell: bash
       run: |
         VERSION="${GITHUB_REF#refs/tags/}"
         BUILD_TIME=$(date +'%Y-%m-%d %H:%M:%S')
-        echo "version=${VERSION}" >> $GITHUB_OUTPUT
-        echo "build_time=${BUILD_TIME}" >> $GITHUB_OUTPUT
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        echo "build_time=${BUILD_TIME}" >> "$GITHUB_OUTPUT"
     
     - name: Generate version_info.txt
       shell: pwsh
       run: |
-        $version = "${{ steps.get_version.outputs.version }}"
+        $version = "${{ steps.version_info.outputs.version }}"
         $version_parts = $version -replace '^v', '' -split '\.'
         $major = if ($version_parts.Length -gt 0) { $version_parts[0] } else { '1' }
         $minor = if ($version_parts.Length -gt 1) { $version_parts[1] } else { '0' }
@@ -81,9 +81,17 @@ VSVersionInfo(
         Set-Content -Path version_info.txt -Value $version_info
     
     - name: Build executable
-      run: |
-        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ steps.get_version.outputs.version }}" --version-file=version_info.txt src/main.py
-        ls dist/
+      run: >
+        pyinstaller 
+        --onefile 
+        --windowed 
+        --icon=src/icon/app_icon.ico 
+        --name="WeChatGuard_${{ steps.version_info.outputs.version }}" 
+        --version-file=version_info.txt 
+        src/main.py
+    
+    - name: List dist directory
+      run: ls dist/
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
@@ -91,7 +99,7 @@ VSVersionInfo(
         files: dist/WeChatGuard_*.exe
         body: |
           ## 更新日志
-          - 版本：${{ steps.get_version.outputs.version }}
-          - 构建时间：${{ steps.get_version.outputs.build_time }}
+          - 版本：${{ steps.version_info.outputs.version }}
+          - 构建时间：${{ steps.version_info.outputs.build_time }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
