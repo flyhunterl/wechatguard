@@ -6,13 +6,10 @@ import logging
 import win32gui
 import win32con
 import win32api
-from PIL import Image, ImageTk
+from PIL import Image
 import tkinter as tk
 from tkinter import messagebox, ttk, simpledialog
 from src.updater import check_update_async
-import io
-from urllib.request import urlopen
-from src.emoji_generator import create_emoji_image
 
 # 配置日志
 logging.basicConfig(
@@ -62,9 +59,6 @@ class WeChatGuardianApp:
         
         # 检查更新
         check_update_async(self.root)
-        
-        # 生成表情图片
-        create_emoji_image()
         
         # 启动守护线程
         self.start_guardian_thread()
