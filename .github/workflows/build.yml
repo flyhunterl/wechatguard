@@ -36,10 +36,9 @@ jobs:
       shell: bash
       run: |
         version="${{ steps.version.outputs.version }}"
-        version_parts=(${version#v})
-        major=$(echo "$version_parts" | cut -d. -f1)
-        minor=$(echo "$version_parts" | cut -d. -f2)
-        patch=$(echo "$version_parts" | cut -d. -f3)
+        major=$(echo "$version" | sed 's/^v\([0-9]*\).*/\1/')
+        minor=$(echo "$version" | sed 's/^v[0-9]*.\([0-9]*\).*/\1/')
+        patch=$(echo "$version" | sed 's/^v[0-9]*.[0-9]*.\([0-9]*\).*/\1/')
         
         major=${major:-1}
         minor=${minor:-0}
