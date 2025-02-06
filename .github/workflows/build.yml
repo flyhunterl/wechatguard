@@ -2,9 +2,9 @@ name: Build WeChatGuard Executable
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - 'v*'  # 触发标签以 v 开头
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
   build:
@@ -34,10 +34,17 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_v0.1.5" --version-file=version_info.txt src/main.py
+        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt src/main.py
         
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
       with:
-        name: WeChatGuard
-        path: dist/WeChatGuard_v0.1.5.exe
+        files: |
+          dist/WeChatGuard_${{ github.ref_name }}.exe
+        body: |
+          ## 更新内容
+          - 新增自动监控系统空闲时间
+          - 达到设定阈值后自动进入守护模式
+          - 优化了空闲时间检测逻辑
+          - 改进了系统托盘图标状态显示
+          - 修复了程序退出时的错误
