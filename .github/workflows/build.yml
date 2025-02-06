@@ -36,7 +36,7 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt src/main.py --hidden-import win32gui --hidden-import win32con --hidden-import PyQt5 --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui  # 添加 PyQt5 相关导入
+        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt --paths src src/main.py --hidden-import win32gui --hidden-import win32con --hidden-import PyQt5 --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
@@ -53,3 +53,4 @@ jobs:
           - 改进了系统托盘图标状态显示
           - 修复了程序退出时的错误
           - 修复依赖问题
+          - 修复模块导入问题
