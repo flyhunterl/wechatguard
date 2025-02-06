@@ -1,4 +1,4 @@
-name: Build WeChatGuard Executable
+name: "Build WeChatGuard Executable"
 
 on:
   push:
@@ -8,24 +8,31 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: "windows-latest"
     steps:
-    - uses: actions/checkout@v3
+    - name: "Checkout Code"
+      uses: "actions/checkout@v3"
     
-    - uses: actions/setup-python@v3
+    - name: "Setup Python"
+      uses: "actions/setup-python@v3"
       with:
-        python-version: '3.9'
+        python-version: "3.9"
     
-    - run: |
+    - name: "Install Dependencies"
+      run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller setuptools wheel
     
-    - id: get_version
-      shell: bash
-      run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+    - name: "Extract Version"
+      id: "get_version"
+      shell: "bash"
+      run: |
+        VERSION="${GITHUB_REF#refs/tags/}"
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
     
-    - shell: pwsh
+    - name: "Generate Version Info"
+      shell: "pwsh"
       run: |
         $version = "${{ steps.get_version.outputs.version }}"
         $version_parts = $version -replace '^v', '' -split '\.'
@@ -70,7 +77,8 @@ VSVersionInfo(
         
         Set-Content -Path version_info.txt -Value $version_info
     
-    - run: >-
+    - name: "Build Executable"
+      run: >-
         pyinstaller 
         --onefile 
         --windowed 
@@ -79,11 +87,12 @@ VSVersionInfo(
         --version-file=version_info.txt 
         src/main.py
     
-    - uses: softprops/action-gh-release@v1
+    - name: "Create Release"
+      uses: "softprops/action-gh-release@v1"
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
       with:
-        files: dist/WeChatGuard_*.exe
+        files: "dist/WeChatGuard_*.exe"
         body: |
           ## 更新日志
           - 版本：${{ steps.get_version.outputs.version }}
