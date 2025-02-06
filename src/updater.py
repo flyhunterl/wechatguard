@@ -7,7 +7,7 @@ from packaging import version
 
 class Updater:
     def __init__(self):
-        self.current_version = "0.2.8"  # 更新当前版本号
+        self.current_version = "0.3.0"  # 更新版本号
         self.github_api = "https://api.github.com/repos/flyhunterl/wechatguard/releases/latest"
         self.github_releases = "https://github.com/flyhunterl/wechatguard/releases/latest"
 

@@ -2,8 +2,8 @@ from PyInstaller.utils.win32.versioninfo import *
 
 version_info = VSVersionInfo(
     ffi=FixedFileInfo(
-        filevers=(0, 2, 8, 0),
-        prodvers=(0, 2, 8, 0),
+        filevers=(0, 3, 0, 0),
+        prodvers=(0, 3, 0, 0),
         mask=0x3f,
         flags=0x0,
         OS=0x40004,
@@ -19,12 +19,12 @@ version_info = VSVersionInfo(
                     [
                         StringStruct(u'CompanyName', u'个人开发'),
                         StringStruct(u'FileDescription', u'WeChat Guardian - 微信守护程序'),
-                        StringStruct(u'FileVersion', u'0.2.8.0'),
+                        StringStruct(u'FileVersion', u'0.3.0.0'),
                         StringStruct(u'InternalName', u'WeChatGuard'),
                         StringStruct(u'LegalCopyright', u'(C) 2024 个人开发'),
                         StringStruct(u'OriginalFilename', u'WeChatGuard.exe'),
                         StringStruct(u'ProductName', u'WeChat Guardian'),
-                        StringStruct(u'ProductVersion', u'0.2.8.0')
+                        StringStruct(u'ProductVersion', u'0.3.0.0')
                     ]
                 )
             ]
