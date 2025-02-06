@@ -25,6 +25,11 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller setuptools wheel
     
+    - name: Generate Icon
+      shell: bash
+      run: |
+        python generate_icon.py
+    
     - name: Extract Version
       id: version
       shell: bash
