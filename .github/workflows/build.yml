@@ -24,7 +24,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller pillow pywin32 pyautogui  # 确保安装 pywin32
+        pip install pyinstaller pillow pywin32 pyautogui PyQt5  # 添加 PyQt5
         
     - name: Generate icon
       run: |
@@ -36,7 +36,7 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt src/main.py --hidden-import win32gui --hidden-import win32con  # 添加隐藏导入
+        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt src/main.py --hidden-import win32gui --hidden-import win32con --hidden-import PyQt5 --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui  # 添加 PyQt5 相关导入
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
@@ -52,3 +52,4 @@ jobs:
           - 优化了空闲时间检测逻辑
           - 改进了系统托盘图标状态显示
           - 修复了程序退出时的错误
+          - 修复依赖问题
