@@ -44,12 +44,13 @@ jobs:
         minor=${minor:-0}
         patch=${patch:-0}
         
-        echo 'from PyInstaller.utils.win32.versioninfo import *
+        cat > version_info.txt << 'EOF'
+from PyInstaller.utils.win32.versioninfo import *
 
 VSVersionInfo(
           ffi=FixedFileInfo(
-            filevers=('$major', '$minor', '$patch', 0),
-            prodvers=('$major', '$minor', '$patch', 0),
+            filevers=($major, $minor, $patch, 0),
+            prodvers=($major, $minor, $patch, 0),
             mask=0x3f,
             flags=0x0,
             OS=0x40004,
@@ -77,7 +78,8 @@ VSVersionInfo(
             ),
             VarFileInfo([VarStruct("Translation", [2052, 1200])])
           ]
-        )' > version_info.txt
+        )
+EOF
     
     - name: Build Executable
       shell: bash
