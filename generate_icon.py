@@ -1,6 +1,10 @@
 from PIL import Image, ImageDraw
+import os
 
 def create_icon(color='gray'):
+    # 确保目录存在
+    os.makedirs('src/icon', exist_ok=True)
+    
     # 创建一个 32x32 的图像
     img = Image.new('RGBA', (32, 32), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
