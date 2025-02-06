@@ -10,24 +10,37 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v3
     
-    - uses: actions/setup-python@v3
+    - name: Setup Python
+      uses: actions/setup-python@v3
       with:
         python-version: 3.9
     
-    - run: |
+    - name: Install Dependencies
+      shell: bash
+      run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller setuptools wheel
     
-    - id: version
-      run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+    - name: Extract Version
+      id: version
+      shell: bash
+      run: |
+        VERSION="${GITHUB_REF#refs/tags/}"
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
     
-    - run: |
+    - name: Generate Version Info
+      shell: bash
+      run: |
         version="${{ steps.version.outputs.version }}"
         version_parts=(${version#v})
-        IFS='.' read -r major minor patch <<< "$version_parts"
+        major=$(echo "$version_parts" | cut -d. -f1)
+        minor=$(echo "$version_parts" | cut -d. -f2)
+        patch=$(echo "$version_parts" | cut -d. -f3)
+        
         major=${major:-1}
         minor=${minor:-0}
         patch=${patch:-0}
@@ -67,7 +80,9 @@ VSVersionInfo(
 )
 EOL
     
-    - run: >
+    - name: Build Executable
+      shell: bash
+      run: >
         pyinstaller 
         --onefile 
         --windowed 
@@ -76,7 +91,8 @@ EOL
         --version-file=version_info.txt 
         src/main.py
     
-    - uses: softprops/action-gh-release@v1
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
