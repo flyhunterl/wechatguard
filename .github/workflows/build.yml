@@ -36,7 +36,7 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt --add-data "src;src" src/main.py --hidden-import win32gui --hidden-import win32con --hidden-import PyQt5 --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui
+        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt --add-data "src;src" src/main.py --hidden-import win32gui --hidden-import win32con --hidden-import PyQt5 --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui --hidden-import PIL --hidden-import PIL._imaging --hidden-import PIL.Image --hidden-import PIL.ImageDraw --hidden-import PIL.ImageFont
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
@@ -47,10 +47,8 @@ jobs:
           dist/WeChatGuard_${{ github.ref_name }}.exe
         body: |
           ## 更新内容
+          - 第一个独立运行版本
+          - 无需 Python 环境
           - 新增自动监控系统空闲时间
-          - 达到设定阈值后自动进入守护模式
-          - 优化了空闲时间检测逻辑
-          - 改进了系统托盘图标状态显示
-          - 修复了程序退出时的错误
-          - 修复依赖问题
-          - 修复模块导入问题
+          - 修复依赖和导入问题
+          - 改进打包配置
