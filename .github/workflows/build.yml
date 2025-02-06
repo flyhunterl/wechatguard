@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: write  # 添加写入权限
 
     steps:
     - uses: actions/checkout@v4
@@ -38,6 +40,8 @@ jobs:
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 添加 GitHub Token
       with:
         files: |
           dist/WeChatGuard_${{ github.ref_name }}.exe
