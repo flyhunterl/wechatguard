@@ -1,4 +1,4 @@
-name: "Build WeChatGuard Executable"
+name: Build WeChatGuard Executable
 
 on:
   push:
@@ -8,39 +8,31 @@ on:
 
 jobs:
   build:
-    runs-on: "windows-latest"
+    runs-on: windows-latest
     steps:
-    - name: "Checkout Code"
-      uses: "actions/checkout@v3"
+    - uses: actions/checkout@v3
     
-    - name: "Setup Python"
-      uses: "actions/setup-python@v3"
+    - uses: actions/setup-python@v3
       with:
-        python-version: "3.9"
+        python-version: 3.9
     
-    - name: "Install Dependencies"
-      run: |
+    - run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller setuptools wheel
     
-    - name: "Extract Version"
-      id: "get_version"
-      shell: "bash"
-      run: |
-        VERSION="${GITHUB_REF#refs/tags/}"
-        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+    - id: version
+      run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
     
-    - name: "Generate Version Info"
-      shell: "pwsh"
-      run: |
-        $version = "${{ steps.get_version.outputs.version }}"
-        $version_parts = $version -replace '^v', '' -split '\.'
-        $major = if ($version_parts.Length -gt 0) { $version_parts[0] } else { '1' }
-        $minor = if ($version_parts.Length -gt 1) { $version_parts[1] } else { '0' }
-        $patch = if ($version_parts.Length -gt 2) { $version_parts[2] } else { '0' }
+    - run: |
+        version="${{ steps.version.outputs.version }}"
+        version_parts=(${version#v})
+        IFS='.' read -r major minor patch <<< "$version_parts"
+        major=${major:-1}
+        minor=${minor:-0}
+        patch=${patch:-0}
         
-        $version_info = @"
+        cat > version_info.txt << EOL
 VSVersionInfo(
   ffi=FixedFileInfo(
     filevers=($major, $minor, $patch, 0),
@@ -73,26 +65,22 @@ VSVersionInfo(
     VarFileInfo([VarEntry('Translation', [2052, 1200])])
   ]
 )
-"@
-        
-        Set-Content -Path version_info.txt -Value $version_info
+EOL
     
-    - name: "Build Executable"
-      run: >-
+    - run: >
         pyinstaller 
         --onefile 
         --windowed 
         --icon=src/icon/app_icon.ico 
-        --name="WeChatGuard_${{ steps.get_version.outputs.version }}" 
+        --name="WeChatGuard_${{ steps.version.outputs.version }}" 
         --version-file=version_info.txt 
         src/main.py
     
-    - name: "Create Release"
-      uses: "softprops/action-gh-release@v1"
+    - uses: softprops/action-gh-release@v1
       env:
-        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: "dist/WeChatGuard_*.exe"
+        files: dist/WeChatGuard_*.exe
         body: |
           ## 更新日志
-          - 版本：${{ steps.get_version.outputs.version }}
+          - 版本：${{ steps.version.outputs.version }}
