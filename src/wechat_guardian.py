@@ -204,6 +204,37 @@ class WeChatGuardian:
         
         return None
 
+    def verify_password(self, parent_window=None):
+        """
+        验证密码
+        """
+        if not self.config.get('password'):
+            return True
+        
+        max_attempts = 3
+        attempts = 0
+        
+        while attempts < max_attempts:
+            password = simpledialog.askstring(
+                "密码验证", 
+                f"请输入密码: (剩余尝试次数: {max_attempts - attempts})",
+                parent=parent_window,
+                show='*'
+            )
+            
+            if password is None:  # 用户点击取消
+                return False
+            
+            if self.config.get('password') == password:
+                return True
+            
+            attempts += 1
+            if attempts < max_attempts:
+                messagebox.showerror("错误", "密码错误，请重试")
+        
+        messagebox.showerror("错误", "密码错误次数过多，请稍后重试")
+        return False
+
 # 示例使用
 if __name__ == '__main__':
     guardian = WeChatGuardian(idle_time=60)

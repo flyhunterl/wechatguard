@@ -9,6 +9,7 @@ import win32api
 from PIL import Image
 import tkinter as tk
 from tkinter import messagebox
+from src.updater import check_update_async
 
 # 配置日志
 logging.basicConfig(
@@ -41,6 +42,10 @@ class WeChatGuardianApp:
         self.guardian = WeChatGuardian()
         self.settings = GuardianSettings()
         
+        # 初始化 tkinter root 窗口
+        self.root = tk.Tk()
+        self.root.withdraw()  # 隐藏主窗口
+        
         # 添加配置更新回调
         self.settings.on_config_changed = self.on_config_changed
         
@@ -61,11 +66,14 @@ class WeChatGuardianApp:
             0, 0, 0, None
         )
         
-        # 创建系统托盘图标并保存句柄
-        self.icon_handle = self.create_tray_icon()
+        # 创建系统托盘图标
+        self.create_tray_icon()
         
-        # 立即启动守护线程，开始检测空闲时间
+        # 立即启动守护线程
         threading.Thread(target=self.guardian_thread, daemon=True).start()
+        
+        # 检查更新
+        check_update_async(self.root)
 
     def create_tray_icon(self):
         """
@@ -139,21 +147,7 @@ class WeChatGuardianApp:
 
         if self.guardian.start_guardian():
             # 更新图标为绿色
-            temp_icon_path = os.path.join(os.path.dirname(__file__), 'temp_green_icon.ico')
-            self.green_icon.save(temp_icon_path, format='ICO', sizes=[(16, 16)])
-            hicon = win32gui.LoadImage(
-                0, 
-                temp_icon_path, 
-                win32con.IMAGE_ICON, 
-                16, 16, 
-                win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTCOLOR
-            )
-            os.remove(temp_icon_path)
-            
-            flags = win32gui.NIF_ICON
-            nid = (self.hwnd, 0, flags, self.WM_TRAYICON, hicon)
-            win32gui.Shell_NotifyIcon(win32gui.NIM_MODIFY, nid)
-            
+            self.update_icon('green')
             threading.Thread(target=self.guardian_thread, daemon=True).start()
             logging.info("守护模式已启动")
             return True
@@ -173,20 +167,7 @@ class WeChatGuardianApp:
         # 尝试停止守护模式，传入父窗口
         if self.guardian.stop_guardian(parent_window=root):
             # 恢复灰色图标
-            temp_icon_path = os.path.join(os.path.dirname(__file__), 'temp_gray_icon.ico')
-            self.gray_icon.save(temp_icon_path, format='ICO', sizes=[(16, 16)])
-            hicon = win32gui.LoadImage(
-                0, 
-                temp_icon_path, 
-                win32con.IMAGE_ICON, 
-                16, 16, 
-                win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTCOLOR
-            )
-            os.remove(temp_icon_path)
-            
-            flags = win32gui.NIF_ICON
-            nid = (self.hwnd, 0, flags, self.WM_TRAYICON, hicon)
-            win32gui.Shell_NotifyIcon(win32gui.NIM_MODIFY, nid)
+            self.update_icon('gray')
             
             # 关闭临时窗口
             root.destroy()
@@ -238,45 +219,24 @@ class WeChatGuardianApp:
                         print("=" * 50)
                         self.guardian.is_guarding = True
                         # 更新图标为绿色
-                        temp_icon_path = os.path.join(os.path.dirname(__file__), 'temp_green_icon.ico')
-                        self.green_icon.save(temp_icon_path, format='ICO', sizes=[(16, 16)])
-                        hicon = win32gui.LoadImage(
-                            0, 
-                            temp_icon_path, 
-                            win32con.IMAGE_ICON, 
-                            16, 16, 
-                            win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTCOLOR
-                        )
-                        os.remove(temp_icon_path)
-                        
-                        flags = win32gui.NIF_ICON
-                        nid = (self.hwnd, 0, flags, self.WM_TRAYICON, hicon)
-                        win32gui.Shell_NotifyIcon(win32gui.NIM_MODIFY, nid)
+                        self.update_icon('green')
                 
                 # 在守护模式下只检查微信窗口
                 elif self.guardian.is_wechat_active():
                     self.guardian.lock_wechat()
                     self.guardian.is_guarding = False
                     # 更新图标为灰色
-                    temp_icon_path = os.path.join(os.path.dirname(__file__), 'temp_gray_icon.ico')
-                    self.gray_icon.save(temp_icon_path, format='ICO', sizes=[(16, 16)])
-                    hicon = win32gui.LoadImage(
-                        0, 
-                        temp_icon_path, 
-                        win32con.IMAGE_ICON, 
-                        16, 16, 
-                        win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTCOLOR
-                    )
-                    os.remove(temp_icon_path)
+                    self.update_icon('gray')
                     
-                    flags = win32gui.NIF_ICON
-                    nid = (self.hwnd, 0, flags, self.WM_TRAYICON, hicon)
-                    win32gui.Shell_NotifyIcon(win32gui.NIM_MODIFY, nid)
+                    # 使用事件来确保只显示一次警告窗口
+                    def show_warning():
+                        messagebox.showwarning("警告", "😄😄😄嘿~你坏蛋。不要看我微信😄😄😄")
+                        print("\n" * 2)
+                        print("继续监控系统空闲时间...")
+                        print("=" * 50)
                     
-                    messagebox.showwarning("警告", "😄😄😄嘿~你坏蛋。不要看我微信😄😄😄")
-                    print("\n" * 2)
-                    print("继续监控系统空闲时间...")
-                    print("=" * 50)
+                    self.root.event_generate('<<ShowWarning>>')
+                    self.root.bind('<<ShowWarning>>', lambda e: show_warning())
                 
                 time.sleep(0.1)  # 缩短检测间隔，使显示更流畅
                 
@@ -294,15 +254,42 @@ class WeChatGuardianApp:
 
     def run(self):
         """
-        运行应用程序
+        运行程序
         """
-        if not self.guardian.is_admin():
-            logging.error("未以管理员权限运行")
-            messagebox.showerror("错误", "请以管理员权限运行程序")
-            return
+        try:
+            if not self.guardian.is_admin():
+                logging.error("未以管理员权限运行")
+                messagebox.showerror("错误", "请以管理员权限运行程序")
+                return
 
-        # 消息循环
-        win32gui.PumpMessages()
+            # 只使用 tkinter 的消息循环
+            self.root.mainloop()
+        except Exception as e:
+            logging.error(f"运行错误: {str(e)}")
+            logging.exception(e)
+
+    def update_icon(self, color):
+        """
+        更新系统托盘图标
+        """
+        try:
+            icon = self.green_icon if color == 'green' else self.gray_icon
+            temp_icon_path = os.path.join(os.path.dirname(__file__), f'temp_{color}_icon.ico')
+            icon.save(temp_icon_path, format='ICO', sizes=[(16, 16)])
+            hicon = win32gui.LoadImage(
+                0, 
+                temp_icon_path, 
+                win32con.IMAGE_ICON, 
+                16, 16, 
+                win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTCOLOR
+            )
+            os.remove(temp_icon_path)
+            
+            flags = win32gui.NIF_ICON
+            nid = (self.hwnd, 0, flags, self.WM_TRAYICON, hicon)
+            win32gui.Shell_NotifyIcon(win32gui.NIM_MODIFY, nid)
+        except Exception as e:
+            logging.error(f"更新图标失败: {str(e)}")
 
 def main():
     try:

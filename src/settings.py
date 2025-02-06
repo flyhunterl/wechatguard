@@ -3,6 +3,8 @@ from tkinter import messagebox, ttk
 import json
 import os
 import hashlib
+import logging
+import base64
 
 class GuardianSettings:
     def __init__(self, config_path=None):
@@ -15,6 +17,7 @@ class GuardianSettings:
         
         self.config_path = config_path
         self.config = self.load_config()
+        self.on_config_changed = None
 
     def load_config(self):
         """
@@ -53,7 +56,7 @@ class GuardianSettings:
                 json.dump(self.config, f, ensure_ascii=False, indent=4)
             
             # 通知其他组件配置已更新
-            if hasattr(self, 'on_config_changed'):
+            if self.on_config_changed:
                 self.on_config_changed(self.config)
         except Exception as e:
             messagebox.showerror("保存错误", f"无法保存配置: {e}")
@@ -64,11 +67,44 @@ class GuardianSettings:
         """
         return hashlib.sha256(password.encode()).hexdigest() if password else ""
 
-    def verify_password(self, input_password, stored_password):
+    def verify_password(self, password):
         """
         验证密码
         """
-        return self.hash_password(input_password) == stored_password
+        try:
+            if not self.config.get('password'):
+                return True
+                
+            stored_salt = base64.b64decode(self.config['salt'].encode('utf-8'))
+            stored_hash = base64.b64decode(self.config['password'].encode('utf-8'))
+            
+            # 使用相同的盐值计算哈希
+            input_hash = self._hash_password(password, stored_salt)
+            
+            # 使用安全的比较方法
+            return self._secure_compare(stored_hash, input_hash)
+        except Exception as e:
+            logging.error(f"密码验证失败: {str(e)}")
+            return False
+            
+    def _hash_password(self, password, salt):
+        """
+        使用 PBKDF2 和 SHA256 哈希密码
+        """
+        return hashlib.pbkdf2_hmac(
+            'sha256',
+            password.encode('utf-8'),
+            salt,
+            100000  # 迭代次数
+        )
+        
+    def _secure_compare(self, a, b):
+        """
+        安全的字符串比较，避免时序攻击
+        """
+        return len(a) == len(b) and all(
+            x == y for x, y in zip(a, b)
+        )
 
     def open_settings_window(self):
         """
@@ -161,6 +197,29 @@ class GuardianSettings:
         idle_save_button.pack(pady=10)  # 增加按钮的上下边距
 
         window.mainloop()
+
+    def set_password(self, password):
+        """
+        设置密码
+        """
+        try:
+            if not password:  # 如果密码为空，则禁用密码保护
+                self.config['password'] = ''
+                self.config['salt'] = ''
+            else:
+                # 生成随机盐值
+                salt = os.urandom(16)
+                # 使用盐值和密码生成哈希
+                hashed = self._hash_password(password, salt)
+                
+                self.config['salt'] = base64.b64encode(salt).decode('utf-8')
+                self.config['password'] = base64.b64encode(hashed).decode('utf-8')
+            
+            self.save_config()
+            return True
+        except Exception as e:
+            logging.error(f"设置密码失败: {str(e)}")
+            return False
 
 # 示例使用
 if __name__ == '__main__':
