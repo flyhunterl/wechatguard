@@ -44,10 +44,10 @@ jobs:
         minor=${minor:-0}
         patch=${patch:-0}
         
-        cat > version_info.txt << 'EOF'
-from PyInstaller.utils.win32.versioninfo import *
-
-VSVersionInfo(
+        cat > version_info.txt << ENDOFFILE
+        from PyInstaller.utils.win32.versioninfo import *
+        
+        VSVersionInfo(
           ffi=FixedFileInfo(
             filevers=($major, $minor, $patch, 0),
             prodvers=($major, $minor, $patch, 0),
@@ -79,7 +79,7 @@ VSVersionInfo(
             VarFileInfo([VarStruct("Translation", [2052, 1200])])
           ]
         )
-EOF
+        ENDOFFILE
     
     - name: Build Executable
       shell: bash
