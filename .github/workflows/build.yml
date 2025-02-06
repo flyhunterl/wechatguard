@@ -30,6 +30,7 @@ jobs:
       run: |
         VERSION="${GITHUB_REF#refs/tags/}"
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "BUILD_TIME=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
     
     - name: Generate version_info.txt
       shell: pwsh
@@ -90,6 +91,6 @@ VSVersionInfo(
         body: |
           ## 更新日志
           - 版本：${{ steps.get_version.outputs.VERSION }}
-          - 构建时间：$(date +'%Y-%m-%d %H:%M:%S')
+          - 构建时间：${{ steps.get_version.outputs.BUILD_TIME }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
