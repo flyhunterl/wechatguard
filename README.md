@@ -13,25 +13,6 @@
 - Python 3.8+
 - 管理员权限
 
-## 依赖管理
-
-本项目使用 Poetry 进行依赖管理。请按照以下步骤安装：
-
-1. 安装 Poetry
-```bash
-pip install poetry
-```
-
-2. 安装项目依赖
-```bash
-poetry install
-```
-
-3. 运行项目
-```bash
-poetry run wechat-guardian
-```
-
 ## 使用方法
 
 ### 启动程序
@@ -55,6 +36,10 @@ poetry run wechat-guardian
 ## 许可证
 
 MIT License
+
+## 项目链接
+- GitHub仓库: [https://github.com/flyhunterl/wechatguard](https://github.com/flyhunterl/wechatguard)
+- 作者博客: [https://llingfei.com](https://llingfei.com)
 
 ## 贡献
 

@@ -1,0 +1,8 @@
+PyQt5
+pyperclip
+requests
+pillow
+pywin32
+pystray
+psutil
+pyautogui
