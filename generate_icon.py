@@ -1,27 +1,21 @@
 from PIL import Image, ImageDraw
 
-def create_icon():
-    # 创建一个 256x256 的图像（常用的图标尺寸）
-    size = 256
-    image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
+def create_icon(color='gray'):
+    # 创建一个 32x32 的图像
+    img = Image.new('RGBA', (32, 32), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
     
-    # 绘制一个简单的图标
-    # 这里可以根据您的需求修改图标的样式
-    margin = size // 8
-    draw.rectangle(
-        [margin, margin, size - margin, size - margin],
-        fill='#1E90FF',  # 使用深蓝色
-        outline='#4169E1',
-        width=2
-    )
+    # 设置颜色
+    if color == 'gray':
+        fill_color = (128, 128, 128, 255)  # 灰色
+    else:
+        fill_color = (0, 255, 0, 255)  # 绿色
     
-    # 确保目录存在
-    import os
-    os.makedirs('src/icon', exist_ok=True)
+    # 画一个圆形
+    draw.ellipse([2, 2, 30, 30], fill=fill_color)
     
-    # 保存为 ICO 文件
-    image.save('src/icon/app_icon.ico', format='ICO')
+    # 保存为图标文件
+    img.save('src/icon/app_icon.ico', format='ICO', sizes=[(16, 16), (32, 32)])
 
 if __name__ == '__main__':
     create_icon() 
