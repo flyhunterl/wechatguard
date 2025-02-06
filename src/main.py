@@ -154,24 +154,53 @@ class WeChatGuardianApp:
                 if id == 1:  # 开始守护
                     self.start_guardian()
                 elif id == 2:  # 停止守护
-                    self.stop_guardian()
+                    logging.info("尝试停止守护")
+                    try:
+                        result = self.stop_guardian()
+                        logging.info(f"停止守护结果: {result}")
+                    except Exception as e:
+                        logging.error(f"停止守护失败: {str(e)}")
+                        logging.exception(e)
                 elif id == 3:  # 设置
                     self.settings.show_settings_dialog()
                 elif id == 4:  # 帮助
                     HelpWindow()
                 elif id == 5:  # 退出
-                    self.cleanup()
-                    win32gui.DestroyWindow(hwnd)
-                    self.root.quit()
-                    return 0
+                    if self.verify_exit():  # 添加退出验证
+                        self.cleanup()
+                        win32gui.DestroyWindow(hwnd)
+                        self.root.quit()
+                        return 0
                 
         return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
+
+    def verify_exit(self):
+        """
+        验证退出操作
+        """
+        # 如果启用了密码保护，需要验证密码
+        if self.settings.config.get('password'):
+            password = simpledialog.askstring(
+                "验证密码",
+                "请输入密码:",
+                parent=self.root,
+                show='*'
+            )
+            if not password or not self.settings.verify_password(password):
+                messagebox.showerror("错误", "密码验证失败")
+                return False
+        
+        # 确认是否退出
+        if messagebox.askyesno("确认", "确定要退出程序吗？"):
+            return True
+        return False
 
     def cleanup(self):
         """
         清理资源
         """
         try:
+            logging.info("开始清理资源")
             # 移除系统托盘图标
             nid = (self.hwnd, 0)
             win32gui.Shell_NotifyIcon(win32gui.NIM_DELETE, nid)
@@ -213,8 +242,13 @@ class WeChatGuardianApp:
         """
         停止守护
         """
+        logging.info("开始执行停止守护")
         if self.guardian.stop_guardian(manual=True):
+            logging.info("守护已停止，更新图标")
             self.update_icon('gray')
+            return True
+        logging.info("停止守护失败")
+        return False
 
     def open_settings(self):
         """
