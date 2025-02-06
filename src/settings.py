@@ -1,71 +1,168 @@
-import tkinter as tk
-from tkinter import messagebox, ttk
 import json
 import os
-import hashlib
 import logging
+import tkinter as tk
+from tkinter import ttk, messagebox, simpledialog
+import hashlib
 import base64
 
 class GuardianSettings:
-    def __init__(self, config_path=None):
-        """
-        守护程序设置管理
-        :param config_path: 配置文件路径
-        """
-        if config_path is None:
-            config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
-        
-        self.config_path = config_path
+    def __init__(self):
         self.config = self.load_config()
         self.on_config_changed = None
 
     def load_config(self):
         """
         加载配置文件
-        :return: 配置字典
         """
-        default_config = {
-            "password_enabled": False,  # 默认不启用密码保护
-            "password": "",
-            "idle_time": 10
-        }
-
-        if os.path.exists(self.config_path):
-            try:
-                with open(self.config_path, 'r', encoding='utf-8') as f:
-                    saved_config = json.load(f)
-                    # 合并默认配置和保存的配置，确保新的默认值生效
-                    merged_config = {**default_config, **saved_config}
-                    
-                    # 如果没有密码，强制禁用密码保护
-                    if not merged_config.get("password"):
-                        merged_config["password_enabled"] = False
-                    
-                    return merged_config
-            except Exception:
-                return default_config
-        
-        return default_config
+        try:
+            if os.path.exists('config.json'):
+                with open('config.json', 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return {"idle_time": 10, "password": ""}  # 默认配置
+        except Exception as e:
+            logging.error(f"加载配置失败: {str(e)}")
+            return {"idle_time": 10, "password": ""}
 
     def save_config(self):
         """
         保存配置文件
         """
         try:
-            with open(self.config_path, 'w', encoding='utf-8') as f:
-                json.dump(self.config, f, ensure_ascii=False, indent=4)
-            
-            # 通知其他组件配置已更新
+            with open('config.json', 'w', encoding='utf-8') as f:
+                json.dump(self.config, f, indent=4)
             if self.on_config_changed:
                 self.on_config_changed(self.config)
+            return True
         except Exception as e:
-            messagebox.showerror("保存错误", f"无法保存配置: {e}")
+            logging.error(f"保存配置失败: {str(e)}")
+            return False
 
-    def hash_password(self, password):
+    def show_settings_dialog(self):
         """
-        对密码进行哈希处理
+        显示设置对话框
         """
-        return hashlib.sha256(password.encode()).hexdigest() if password else ""
+        window = tk.Toplevel()
+        window.title("设置")
+        window.geometry("300x250")  # 增加窗口高度
+        window.resizable(False, False)
+
+        # 空闲时间设置
+        idle_frame = ttk.LabelFrame(window, text="空闲时间设置")
+        idle_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        ttk.Label(idle_frame, text="空闲时间阈值(秒):").pack(side=tk.LEFT, padx=5)
+        idle_var = tk.StringVar(value=str(self.config.get("idle_time", 10)))
+        
+        def on_idle_time_change(*args):
+            try:
+                idle_time = int(idle_var.get())
+                if idle_time > 0:
+                    self.config["idle_time"] = idle_time
+                    self.save_config()
+            except ValueError:
+                pass
+
+        idle_var.trace('w', on_idle_time_change)
+        ttk.Entry(idle_frame, textvariable=idle_var, width=10).pack(side=tk.LEFT)
+
+        # 密码保护设置
+        pwd_frame = ttk.LabelFrame(window, text="密码保护")
+        pwd_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        pwd_var = tk.BooleanVar(value=bool(self.config.get("password")))
+        ttk.Checkbutton(
+            pwd_frame, 
+            text="启用密码保护", 
+            variable=pwd_var,
+            command=lambda: self.toggle_password(pwd_var.get(), window)
+        ).pack(padx=5, pady=5)
+
+        # 说明文本
+        note_frame = ttk.LabelFrame(window, text="说明")
+        note_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)  # 让说明框架填充剩余空间
+
+        ttk.Label(
+            note_frame, 
+            text=(
+                "1. 空闲时间：系统无操作超过设定时间后自动进入守护模式\n\n" + 
+                "2. 密码保护：启用后需要输入密码才能手动停止守护\n" +
+                "   • 自动停止守护不需要密码验证\n" +
+                "   • 停用密码保护需要验证当前密码"
+            ),
+            wraplength=260,  # 增加文本宽度
+            justify=tk.LEFT  # 左对齐
+        ).pack(padx=5, pady=5, fill=tk.BOTH, expand=True)  # 让文本标签填充框架
+
+        window.transient()
+        window.grab_set()
+        window.focus_set()
+
+    def toggle_password(self, enable, parent_window=None):
+        """
+        切换密码保护
+        """
+        # 如果之前有密码，需要先验证
+        if self.config.get('password') and not self.verify_password(
+            simpledialog.askstring(
+                "验证密码",
+                "请输入当前密码:",
+                parent=parent_window,
+                show='*'
+            )
+        ):
+            messagebox.showerror("错误", "密码验证失败")
+            return False
+        
+        if enable:
+            # 设置新密码
+            password = simpledialog.askstring(
+                "设置密码",
+                "请输入新密码:",
+                parent=parent_window,
+                show='*'
+            )
+            if password:
+                confirm = simpledialog.askstring(
+                    "确认密码",
+                    "请再次输入密码:",
+                    parent=parent_window,
+                    show='*'
+                )
+                if password == confirm:
+                    self.set_password(password)
+                else:
+                    messagebox.showerror("错误", "两次输入的密码不一致")
+                    return False
+            else:
+                return False
+        else:
+            # 已经验证过密码了，直接清除
+            self.set_password("")
+        return True
+
+    def set_password(self, password):
+        """
+        设置密码
+        """
+        try:
+            if not password:  # 如果密码为空，则禁用密码保护
+                self.config['password'] = ''
+                self.config['salt'] = ''
+            else:
+                # 生成随机盐值
+                salt = os.urandom(16)
+                # 使用盐值和密码生成哈希
+                hashed = self._hash_password(password, salt)
+                
+                self.config['salt'] = base64.b64encode(salt).decode('utf-8')
+                self.config['password'] = base64.b64encode(hashed).decode('utf-8')
+            
+            self.save_config()
+            return True
+        except Exception as e:
+            logging.error(f"设置密码失败: {str(e)}")
+            return False
 
     def verify_password(self, password):
         """
@@ -75,10 +172,9 @@ class GuardianSettings:
             if not self.config.get('password'):
                 return True
                 
-            stored_salt = base64.b64decode(self.config['salt'].encode('utf-8'))
             stored_hash = base64.b64decode(self.config['password'].encode('utf-8'))
+            stored_salt = base64.b64decode(self.config['salt'].encode('utf-8'))
             
-            # 使用相同的盐值计算哈希
             input_hash = self._hash_password(password, stored_salt)
             
             # 使用安全的比较方法
@@ -105,123 +201,3 @@ class GuardianSettings:
         return len(a) == len(b) and all(
             x == y for x, y in zip(a, b)
         )
-
-    def open_settings_window(self):
-        """
-        打开设置窗口
-        """
-        window = tk.Tk()
-        window.title("微信守护程序 - 设置")
-        window.geometry("400x400")  # 增加窗口高度
-
-        # 密码设置
-        password_frame = ttk.LabelFrame(window, text="密码保护")
-        password_frame.pack(padx=10, pady=10, fill="x")
-
-        # 记录原始密码和启用状态
-        original_password = self.config.get("password", "")
-        original_password_enabled = self.config.get("password_enabled", False) and bool(original_password)
-
-        password_var = tk.BooleanVar(value=original_password_enabled)
-        password_check = ttk.Checkbutton(
-            password_frame, 
-            text="启用密码（需重启程序）", 
-            variable=password_var
-        )
-        password_check.pack(anchor="w")
-
-        password_label = ttk.Label(password_frame, text="密码:")
-        password_label.pack(anchor="w")
-
-        password_entry = ttk.Entry(password_frame, show="*")
-        password_entry.pack(anchor="w", fill="x", padx=10)
-
-        def save_settings():
-            # 获取密码状态和密码
-            is_password_enabled = password_var.get()
-            new_password = password_entry.get()
-
-            # 如果没有输入新密码，但要求启用密码，则保持原密码状态
-            if is_password_enabled and not new_password:
-                if not original_password:
-                    messagebox.showerror("错误", "请输入密码")
-                    return
-
-            # 处理密码逻辑
-            if new_password:
-                # 如果输入了新密码，哈希并保存
-                hashed_password = self.hash_password(new_password)
-                self.config["password"] = hashed_password
-                self.config["password_enabled"] = True
-            else:
-                # 没有新密码，根据复选框状态决定
-                self.config["password_enabled"] = False
-                self.config["password"] = ""
-
-            # 保存配置
-            self.save_config()
-            window.destroy()
-
-        save_button = ttk.Button(window, text="保存", command=save_settings)
-        save_button.pack(pady=10)
-
-        # 空闲时间设置
-        idle_frame = ttk.LabelFrame(window, text="空闲时间设置")
-        idle_frame.pack(padx=10, pady=10, fill="x")
-
-        idle_var = tk.IntVar(value=self.config.get("idle_time", 10))
-        
-        def update_idle_label(value):
-            idle_label.config(text=f"空闲时间阈值: {int(float(value))} 秒")
-        
-        idle_label = ttk.Label(idle_frame, text=f"空闲时间阈值: {idle_var.get()} 秒")
-        idle_label.pack(anchor="w", padx=10, pady=5)
-
-        idle_scale = ttk.Scale(
-            idle_frame,
-            from_=5,
-            to=300,
-            orient="horizontal",
-            variable=idle_var,
-            command=update_idle_label
-        )
-        idle_scale.pack(fill="x", padx=10, pady=5)
-
-        def save_idle_time():
-            idle_time = int(idle_var.get())
-            self.config["idle_time"] = idle_time
-            self.save_config()
-            messagebox.showinfo("成功", f"空闲时间已设置为 {idle_time} 秒")
-
-        idle_save_button = ttk.Button(idle_frame, text="保存空闲时间设置", command=save_idle_time)
-        idle_save_button.pack(pady=10)  # 增加按钮的上下边距
-
-        window.mainloop()
-
-    def set_password(self, password):
-        """
-        设置密码
-        """
-        try:
-            if not password:  # 如果密码为空，则禁用密码保护
-                self.config['password'] = ''
-                self.config['salt'] = ''
-            else:
-                # 生成随机盐值
-                salt = os.urandom(16)
-                # 使用盐值和密码生成哈希
-                hashed = self._hash_password(password, salt)
-                
-                self.config['salt'] = base64.b64encode(salt).decode('utf-8')
-                self.config['password'] = base64.b64encode(hashed).decode('utf-8')
-            
-            self.save_config()
-            return True
-        except Exception as e:
-            logging.error(f"设置密码失败: {str(e)}")
-            return False
-
-# 示例使用
-if __name__ == '__main__':
-    settings = GuardianSettings()
-    settings.open_settings_window()

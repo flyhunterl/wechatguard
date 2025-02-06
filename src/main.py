@@ -6,10 +6,13 @@ import logging
 import win32gui
 import win32con
 import win32api
-from PIL import Image
+from PIL import Image, ImageTk
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk, simpledialog
 from src.updater import check_update_async
+import io
+from urllib.request import urlopen
+from src.emoji_generator import create_emoji_image
 
 # 配置日志
 logging.basicConfig(
@@ -39,12 +42,54 @@ class WeChatGuardianApp:
     
     def __init__(self):
         logging.info("初始化微信守护程序")
-        self.guardian = WeChatGuardian()
-        self.settings = GuardianSettings()
         
-        # 初始化 tkinter root 窗口
+        # 定义窗口类名
+        self.window_class_name = "WeChatGuardianTrayClass"
+        
+        # 创建隐藏的主窗口
         self.root = tk.Tk()
         self.root.withdraw()  # 隐藏主窗口
+        
+        # 初始化组件
+        self.guardian = WeChatGuardian(self.root)
+        self.settings = GuardianSettings()
+        
+        # 注册窗口类
+        self.register_window_class()
+        
+        # 创建系统托盘图标
+        self.create_tray_icon()
+        
+        # 检查更新
+        check_update_async(self.root)
+        
+        # 生成表情图片
+        create_emoji_image()
+        
+        # 启动守护线程
+        self.start_guardian_thread()
+        
+        # 进入消息循环
+        self.root.mainloop()
+
+    def register_window_class(self):
+        """
+        注册窗口类
+        """
+        self.wc = win32gui.WNDCLASS()
+        self.wc.lpfnWndProc = self.wnd_proc
+        self.wc.lpszClassName = self.window_class_name
+        self.wc.hInstance = win32gui.GetModuleHandle(None)
+        self.class_atom = win32gui.RegisterClass(self.wc)
+        
+        # 创建隐藏窗口
+        self.hwnd = win32gui.CreateWindow(
+            self.class_atom,
+            self.window_class_name,
+            win32con.WS_OVERLAPPED,
+            0, 0, 0, 0,
+            0, 0, self.wc.hInstance, None
+        )
         
         # 添加配置更新回调
         self.settings.on_config_changed = self.on_config_changed
@@ -52,28 +97,6 @@ class WeChatGuardianApp:
         # 加载图标
         self.gray_icon = IconGenerator.create_icon('gray')
         self.green_icon = IconGenerator.create_icon('green')
-        
-        # 创建隐藏窗口用于接收系统托盘消息
-        self.wc = win32gui.WNDCLASS()
-        self.wc.lpfnWndProc = self.wnd_proc
-        self.wc.lpszClassName = "WeChatGuardianTrayClass"
-        win32gui.RegisterClass(self.wc)
-        
-        self.hwnd = win32gui.CreateWindow(
-            self.wc.lpszClassName, 
-            "WeChatGuardian", 
-            0, 0, 0, 0, 0, 
-            0, 0, 0, None
-        )
-        
-        # 创建系统托盘图标
-        self.create_tray_icon()
-        
-        # 立即启动守护线程
-        threading.Thread(target=self.guardian_thread, daemon=True).start()
-        
-        # 检查更新
-        check_update_async(self.root)
 
     def create_tray_icon(self):
         """
@@ -106,7 +129,9 @@ class WeChatGuardianApp:
         """
         窗口消息处理程序
         """
-        if msg == self.WM_TRAYICON:
+        if msg == win32con.WM_DESTROY:
+            win32gui.PostQuitMessage(0)
+        elif msg == self.WM_TRAYICON:
             if lparam == win32con.WM_LBUTTONDBLCLK:
                 logging.info("系统托盘图标双击，尝试启动守护模式")
                 self.start_guardian()
@@ -114,25 +139,61 @@ class WeChatGuardianApp:
                 menu = win32gui.CreatePopupMenu()
                 win32gui.AppendMenu(menu, win32con.MF_STRING, 1, "开始守护")
                 win32gui.AppendMenu(menu, win32con.MF_STRING, 2, "停止守护")
+                win32gui.AppendMenu(menu, win32con.MF_SEPARATOR, 0, "")
                 win32gui.AppendMenu(menu, win32con.MF_STRING, 3, "设置")
                 win32gui.AppendMenu(menu, win32con.MF_STRING, 4, "帮助")
+                win32gui.AppendMenu(menu, win32con.MF_SEPARATOR, 0, "")
                 win32gui.AppendMenu(menu, win32con.MF_STRING, 5, "退出")
+                
                 pos = win32gui.GetCursorPos()
-                win32gui.SetForegroundWindow(self.hwnd)
-                result = win32gui.TrackPopupMenu(menu, win32con.TPM_LEFTALIGN | win32con.TPM_LEFTBUTTON | win32con.TPM_BOTTOMALIGN | win32con.TPM_RETURNCMD, pos[0], pos[1], 0, self.hwnd, None)
-                win32gui.PostMessage(self.hwnd, win32con.WM_NULL, 0, 0)
-                if result == 1:
+                win32gui.SetForegroundWindow(hwnd)
+                id = win32gui.TrackPopupMenu(
+                    menu,
+                    win32con.TPM_LEFTALIGN | win32con.TPM_BOTTOMALIGN | win32con.TPM_RETURNCMD,
+                    pos[0], pos[1],
+                    0,
+                    hwnd,
+                    None
+                )
+                win32gui.PostMessage(hwnd, win32con.WM_NULL, 0, 0)
+                
+                if id == 1:  # 开始守护
                     self.start_guardian()
-                elif result == 2:
+                elif id == 2:  # 停止守护
                     self.stop_guardian()
-                elif result == 3:
-                    self.open_settings()
-                elif result == 4:
-                    self.show_help()
-                elif result == 5:
-                    self.exit_app()
-        
+                elif id == 3:  # 设置
+                    self.settings.show_settings_dialog()
+                elif id == 4:  # 帮助
+                    HelpWindow()
+                elif id == 5:  # 退出
+                    self.cleanup()
+                    win32gui.DestroyWindow(hwnd)
+                    self.root.quit()
+                    return 0
+                
         return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
+
+    def cleanup(self):
+        """
+        清理资源
+        """
+        try:
+            # 移除系统托盘图标
+            nid = (self.hwnd, 0)
+            win32gui.Shell_NotifyIcon(win32gui.NIM_DELETE, nid)
+            
+            # 停止所有线程
+            self.guardian.is_guarding = False
+            
+            # 删除临时文件
+            if os.path.exists('temp_gray_icon.ico'):
+                os.remove('temp_gray_icon.ico')
+            if os.path.exists('temp_green_icon.ico'):
+                os.remove('temp_green_icon.ico')
+            
+            logging.info("程序正常退出")
+        except Exception as e:
+            logging.error(f"清理资源失败: {str(e)}")
 
     def start_guardian(self):
         """
@@ -156,21 +217,10 @@ class WeChatGuardianApp:
 
     def stop_guardian(self):
         """
-        停止守护模式
+        停止守护
         """
-        logging.info("停止守护模式")
-        
-        # 创建一个临时的 Tk 窗口用于密码验证
-        root = tk.Tk()
-        root.withdraw()  # 隐藏主窗口
-        
-        # 尝试停止守护模式，传入父窗口
-        if self.guardian.stop_guardian(parent_window=root):
-            # 恢复灰色图标
+        if self.guardian.stop_guardian(manual=True):
             self.update_icon('gray')
-            
-            # 关闭临时窗口
-            root.destroy()
 
     def open_settings(self):
         """
@@ -205,10 +255,13 @@ class WeChatGuardianApp:
         print("开始监控系统空闲时间...")
         print("=" * 50)
         
+        warning_shown = False  # 添加标志位，避免重复显示警告
+        
         while True:
             try:
                 # 只在非守护模式下检测空闲时间
                 if not self.guardian.is_guarding:
+                    warning_shown = False  # 重置标志位
                     # 获取并显示空闲时间
                     idle_time = self.guardian.get_idle_duration()
                     print(f"\r当前空闲时间：{idle_time:.1f}秒，设定阈值：{self.guardian.idle_time_threshold}秒", end='', flush=True)
@@ -222,21 +275,49 @@ class WeChatGuardianApp:
                         self.update_icon('green')
                 
                 # 在守护模式下只检查微信窗口
-                elif self.guardian.is_wechat_active():
+                elif self.guardian.is_wechat_active() and not warning_shown:
+                    # 先锁定微信
                     self.guardian.lock_wechat()
+                    
+                    # 立即显示警告窗口
+                    warning = tk.Toplevel()
+                    warning.title("警告")
+                    warning.geometry("1125x808")
+                    warning.resizable(False, False)
+                    
+                    # 使用 Segoe UI Emoji 字体显示彩色表情
+                    label = tk.Label(
+                        warning, 
+                        text="😈 喂～你坏蛋 😈\n不要看我微信", 
+                        font=("Segoe UI Emoji", 48),
+                        justify=tk.CENTER
+                    )
+                    label.pack(expand=True)
+                    
+                    # 创建一个大号按钮样式
+                    style = ttk.Style()
+                    style.configure(
+                        "Big.TButton",
+                        padding=(20, 10),
+                        font=("微软雅黑", 16)
+                    )
+                    
+                    # 添加放大的确定按钮
+                    ttk.Button(
+                        warning, 
+                        text="好的，我错了", 
+                        command=warning.destroy,
+                        style="Big.TButton"
+                    ).pack(pady=30)
+                    
+                    warning.transient()
+                    warning.grab_set()
+                    warning.focus_set()
+                    
+                    # 更新状态
                     self.guardian.is_guarding = False
-                    # 更新图标为灰色
                     self.update_icon('gray')
-                    
-                    # 使用事件来确保只显示一次警告窗口
-                    def show_warning():
-                        messagebox.showwarning("警告", "😄😄😄嘿~你坏蛋。不要看我微信😄😄😄")
-                        print("\n" * 2)
-                        print("继续监控系统空闲时间...")
-                        print("=" * 50)
-                    
-                    self.root.event_generate('<<ShowWarning>>')
-                    self.root.bind('<<ShowWarning>>', lambda e: show_warning())
+                    warning_shown = True
                 
                 time.sleep(0.1)  # 缩短检测间隔，使显示更流畅
                 
@@ -252,21 +333,11 @@ class WeChatGuardianApp:
             self.guardian.config = new_config
             self.guardian.idle_time_threshold = new_config.get("idle_time", 60)
 
-    def run(self):
+    def start_guardian_thread(self):
         """
-        运行程序
+        启动守护线程
         """
-        try:
-            if not self.guardian.is_admin():
-                logging.error("未以管理员权限运行")
-                messagebox.showerror("错误", "请以管理员权限运行程序")
-                return
-
-            # 只使用 tkinter 的消息循环
-            self.root.mainloop()
-        except Exception as e:
-            logging.error(f"运行错误: {str(e)}")
-            logging.exception(e)
+        threading.Thread(target=self.guardian_thread, daemon=True).start()
 
     def update_icon(self, color):
         """

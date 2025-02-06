@@ -1,76 +1,104 @@
 import tkinter as tk
 from tkinter import ttk
+import webbrowser
 
 class HelpWindow:
+    def __init__(self):
+        self.window = tk.Toplevel()
+        self.window.title("帮助")
+        self.window.geometry("400x450")
+        self.window.resizable(False, False)
+        
+        # 创建主框架
+        main_frame = ttk.Frame(self.window, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # 创建不同的分区
+        sections = [
+            ("主要功能", [
+                "• 自动监控系统空闲时间",
+                "• 达到设定阈值后自动进入守护模式",
+                "• 在守护模式下自动锁定微信窗口并显示警告",
+                "• 系统托盘显示程序状态"
+            ]),
+            ("使用说明", [
+                "1. 程序启动后会在系统托盘显示图标",
+                "   • 灰色：正在监控空闲时间",
+                "   • 绿色：已进入守护模式",
+                "2. 右键托盘图标可以：",
+                "   • 开始/停止守护",
+                "   • 查看设置",
+                "   • 查看帮助",
+                "   • 退出程序"
+            ]),
+            ("设置说明", [
+                "• 空闲时间阈值：设置多少秒无操作后进入守护模式",
+                "• 密码保护：启用后需要输入密码才能手动停止守护",
+                "  - 自动停止守护不需要密码验证",
+                "  - 停用密码保护需要验证当前密码"
+            ]),
+            ("注意事项", [
+                "• 需要管理员权限运行",
+                "• 仅支持 Windows 系统",
+                "• 建议将程序添加到开机启动项"
+            ])
+        ]
+        
+        # 创建文本框
+        text = tk.Text(main_frame, wrap=tk.WORD, width=45, height=20)
+        text.pack(fill=tk.BOTH, expand=True)
+        
+        # 插入标题
+        text.tag_configure("title", font=("微软雅黑", 12, "bold"))
+        text.tag_configure("content", font=("微软雅黑", 10))
+        
+        text.insert(tk.END, "WeChat Guardian (微信守护程序)\n\n", "title")
+        
+        # 插入各个部分
+        for section_title, content in sections:
+            text.insert(tk.END, f"{section_title}：\n", "title")
+            for line in content:
+                text.insert(tk.END, f"{line}\n", "content")
+            text.insert(tk.END, "\n")
+        
+        text.config(state=tk.DISABLED)
+        
+        # 添加按钮框架
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X, pady=(10,0))
+        
+        # 添加项目主页按钮
+        ttk.Button(
+            button_frame, 
+            text="访问项目主页", 
+            command=lambda: webbrowser.open("https://github.com/flyhunterl/wechatguard")
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # 添加作者博客按钮
+        ttk.Button(
+            button_frame, 
+            text="访问作者博客", 
+            command=lambda: webbrowser.open("https://llingfei.com")
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # 添加关闭按钮
+        ttk.Button(
+            button_frame, 
+            text="关闭", 
+            command=self.window.destroy
+        ).pack(side=tk.RIGHT, padx=5)
+        
+        # 设置模态窗口
+        self.window.transient()
+        self.window.grab_set()
+        self.window.focus_set()
+
     @staticmethod
     def show_help():
-        """
-        显示帮助窗口
-        """
-        window = tk.Tk()
-        window.title("微信守护程序 - 帮助")
-        window.geometry("500x600")
+        HelpWindow()
 
-        help_text = """
-微信守护程序 使用说明
-
-## 功能特点
-- 🛡️ 微信窗口守护
-- 🕒 系统空闲时间检测
-- 🔐 密码保护设置
-- 🖥️ 系统托盘图标管理
-
-## 环境要求
-- Windows 10/11
-- 管理员权限
-
-## 使用方法
-
-### 启动程序
-- 以管理员权限运行
-- 双击图标进入守护模式
-
-### 系统托盘菜单
-- 开始守护：进入守护模式
-- 停止守护：退出守护模式
-- 设置：配置守护密码(可选)和空闲时间
-- 帮助：查看使用说明
-- 退出：关闭程序
-
-## 注意事项
-- 请始终以管理员权限运行
-- 尊重他人隐私
-- 仅在合法和有道德的情况下使用
-
-## 项目链接
-- GitHub仓库: https://github.com/flyhunterl/wechatguard
-- 作者博客: https://llingfei.com
-
-## 许可证
-MIT License
-
-## 贡献
-欢迎提交 Issues 和 Pull Requests！
-"""
-
-        help_label = ttk.Label(window, text="微信守护程序使用说明", font=("微软雅黑", 16, "bold"))
-        help_label.pack(pady=10)
-
-        text_widget = tk.Text(window, wrap=tk.WORD, font=("微软雅黑", 10))
-        text_widget.insert(tk.END, help_text)
-        text_widget.config(state=tk.DISABLED)  # 设为只读
-
-        scrollbar = ttk.Scrollbar(window, command=text_widget.yview)
-        text_widget.configure(yscrollcommand=scrollbar.set)
-
-        text_widget.pack(padx=20, pady=10, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        close_button = ttk.Button(window, text="关闭", command=window.destroy)
-        close_button.pack(pady=10)
-
-        window.mainloop()
-
-# 示例使用
 if __name__ == '__main__':
+    root = tk.Tk()
+    root.withdraw()
     HelpWindow.show_help()
+    root.mainloop()
