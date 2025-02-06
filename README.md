@@ -1,74 +1,55 @@
-# 微信守护程序
+# WeChat Guardian (微信守护程序)
 
-## 功能特点
+一个自动监控系统空闲时间并在需要时锁定微信的工具。
 
-- 🛡️ 微信窗口守护
-- 🕒 系统空闲时间检测
-- 🔐 密码保护设置
-- 🖥️ 系统托盘图标管理
+## 主要功能
 
-## 环境要求
+- 自动监控系统空闲时间
+- 达到设定阈值后自动进入守护模式
+- 在守护模式下自动锁定微信窗口
+- 系统托盘显示程序状态
+- 可自定义空闲时间阈值
 
-- Windows 10/11
-- 管理员权限
+## 使用说明
 
-## 使用方法
+1. 以管理员权限运行程序
+2. 程序启动后会在系统托盘显示图标
+3. 程序会自动监控系统空闲时间：
+   - 灰色图标：正在监控空闲时间
+   - 绿色图标：已进入守护模式
+4. 右键托盘图标可以：
+   - 查看设置
+   - 退出程序
 
-### 启动程序
+## 设置说明
 
-- 以管理员权限运行
-- 双击图标进入守护模式
+- 空闲时间阈值：设置多少秒无操作后进入守护模式（默认10秒）
+- 密码保护：可以设置解锁密码（可选）
 
-### 系统托盘菜单
+## 版本历史
 
-- 开始守护：进入守护模式
-- 停止守护：退出守护模式
-- 设置：配置守护密码(可选)和空闲时间
-- 帮助：查看使用说明
-- 退出：关闭程序
+### v0.1.5
+- 新增自动监控系统空闲时间
+- 达到设定阈值后自动进入守护模式
+- 优化了空闲时间检测逻辑
+- 改进了系统托盘图标状态显示
+- 修复了程序退出时的错误
 
-## 安装与构建
-
-### 直接下载
-
-你可以在 [Releases](https://github.com/flyhunterl/wechatguard/releases) 页面下载最新的可执行文件。
-
-### 从源代码构建
-
-#### 环境准备
-
-1. 确保已安装 Python 3.9 或更高版本
-2. 克隆仓库
-```bash
-git clone https://github.com/flyhunterl/wechatguard.git
-cd wechatguard
-```
-
-#### 安装依赖
-```bash
-pip install -r requirements.txt
-```
-
-#### 运行程序
-```bash
-python src/main.py
-```
-
-#### 打包可执行文件
-```bash
-pip install pyinstaller
-pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard" src/main.py
-```
-
-## 开发状态
-
-![Build Status](https://github.com/flyhunterl/wechatguard/workflows/Build%20WeChatGuard%20Executable/badge.svg)
+### v0.1.0
+- 初始版本发布
 
 ## 注意事项
 
-- 请始终以管理员权限运行
-- 尊重他人隐私
-- 仅在合法和有道德的情况下使用
+- 需要管理员权限运行
+- 仅支持 Windows 系统
+- 建议将程序添加到开机启动项
+
+## 开发说明
+
+本程序使用 Python 开发，主要依赖：
+- PyWin32
+- PIL
+- PyAutoGUI
 
 ## 许可证
 

@@ -24,7 +24,7 @@ class GuardianSettings:
         default_config = {
             "password_enabled": False,  # 默认不启用密码保护
             "password": "",
-            "idle_time": 60
+            "idle_time": 10
         }
 
         if os.path.exists(self.config_path):
@@ -51,6 +51,10 @@ class GuardianSettings:
         try:
             with open(self.config_path, 'w', encoding='utf-8') as f:
                 json.dump(self.config, f, ensure_ascii=False, indent=4)
+            
+            # 通知其他组件配置已更新
+            if hasattr(self, 'on_config_changed'):
+                self.on_config_changed(self.config)
         except Exception as e:
             messagebox.showerror("保存错误", f"无法保存配置: {e}")
 
@@ -72,7 +76,7 @@ class GuardianSettings:
         """
         window = tk.Tk()
         window.title("微信守护程序 - 设置")
-        window.geometry("400x300")
+        window.geometry("400x400")  # 增加窗口高度
 
         # 密码设置
         password_frame = ttk.LabelFrame(window, text="密码保护")
@@ -126,29 +130,35 @@ class GuardianSettings:
         save_button.pack(pady=10)
 
         # 空闲时间设置
-        idle_frame = ttk.LabelFrame(window, text="空闲时间")
+        idle_frame = ttk.LabelFrame(window, text="空闲时间设置")
         idle_frame.pack(padx=10, pady=10, fill="x")
 
-        idle_label = ttk.Label(idle_frame, text="空闲时间阈值（秒）:")
-        idle_label.pack(anchor="w")
+        idle_var = tk.IntVar(value=self.config.get("idle_time", 10))
+        
+        def update_idle_label(value):
+            idle_label.config(text=f"空闲时间阈值: {int(float(value))} 秒")
+        
+        idle_label = ttk.Label(idle_frame, text=f"空闲时间阈值: {idle_var.get()} 秒")
+        idle_label.pack(anchor="w", padx=10, pady=5)
 
-        idle_var = tk.IntVar(value=self.config.get("idle_time", 60))
-        idle_entry = ttk.Entry(idle_frame, textvariable=idle_var)
-        idle_entry.pack(anchor="w", fill="x", padx=10)
+        idle_scale = ttk.Scale(
+            idle_frame,
+            from_=5,
+            to=300,
+            orient="horizontal",
+            variable=idle_var,
+            command=update_idle_label
+        )
+        idle_scale.pack(fill="x", padx=10, pady=5)
 
         def save_idle_time():
-            try:
-                idle_time = int(idle_var.get())
-                if idle_time > 0:
-                    self.config["idle_time"] = idle_time
-                    self.save_config()
-                else:
-                    messagebox.showerror("错误", "空闲时间必须为正整数")
-            except ValueError:
-                messagebox.showerror("错误", "请输入有效的数字")
+            idle_time = int(idle_var.get())
+            self.config["idle_time"] = idle_time
+            self.save_config()
+            messagebox.showinfo("成功", f"空闲时间已设置为 {idle_time} 秒")
 
-        idle_save_button = ttk.Button(idle_frame, text="保存", command=save_idle_time)
-        idle_save_button.pack(pady=5)
+        idle_save_button = ttk.Button(idle_frame, text="保存空闲时间设置", command=save_idle_time)
+        idle_save_button.pack(pady=10)  # 增加按钮的上下边距
 
         window.mainloop()
 

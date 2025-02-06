@@ -1,5 +1,5 @@
 {
-    "password_enabled": true,
-    "password": "123",
-    "idle_time": 60
+    "password_enabled": false,
+    "password": "",
+    "idle_time": 8
 }
