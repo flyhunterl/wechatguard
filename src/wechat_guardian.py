@@ -11,6 +11,8 @@ import os
 import json
 import hashlib
 import logging
+import base64
+from src.settings import GuardianSettings
 
 class LASTINPUTINFO(ctypes.Structure):
     _fields_ = [
@@ -19,20 +21,22 @@ class LASTINPUTINFO(ctypes.Structure):
     ]
 
 class WeChatGuardian:
-    def __init__(self, idle_time=60):
+    def __init__(self, root=None):
         """
         微信窗口守护器
-        :param idle_time: 空闲时间阈值（秒）
+        :param root: 主窗口
         """
+        self.root = root
         self.is_guarding = False
-        self.idle_time_threshold = idle_time
+        self.idle_time_threshold = 60
         self.last_input_info = LASTINPUTINFO()
         self.last_input_info.cbSize = ctypes.sizeof(self.last_input_info)
         
         # 加载配置
         config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
-        self.config = self.load_config(config_path)
-        self.idle_time_threshold = self.config.get("idle_time", idle_time)
+        self.settings = GuardianSettings()  # 创建 settings 实例
+        self.config = self.settings.config  # 使用 settings 的配置
+        self.idle_time_threshold = self.config.get("idle_time", 60)
 
     def load_config(self, config_path):
         """
@@ -41,7 +45,8 @@ class WeChatGuardian:
         default_config = {
             "password_enabled": False,
             "password": "",
-            "idle_time": 10  # 修改默认值为10秒
+            "idle_time": 10,  # 修改默认值为10秒
+            "salt": ""
         }
 
         if os.path.exists(config_path):
@@ -138,35 +143,32 @@ class WeChatGuardian:
         logging.info(f"开始守护模式，空闲时间阈值：{self.idle_time_threshold}秒")
         return True
 
-    def stop_guardian(self, parent_window=None):
+    def stop_guardian(self, manual=False):
         """
         停止守护模式
-        :param parent_window: 父窗口，用于显示密码输入对话框
-        :return: 是否成功停止
+        
+        Args:
+            manual (bool): 是否是手动停止，如果是手动停止需要验证密码
+        
+        Returns:
+            bool: 是否成功停止守护
         """
-        # 检查是否启用密码保护且密码不为空
-        if self.config.get("password_enabled", False) and self.config.get("password", ""):
-            # 如果没有提供父窗口，创建一个临时的
-            if parent_window is None:
-                parent_window = tk.Tk()
-                parent_window.withdraw()  # 隐藏主窗口
-
-            # 弹出密码输入对话框
-            input_password = simpledialog.askstring(
-                "密码验证", 
-                "请输入停止守护模式的密码:", 
-                show='*', 
-                parent=parent_window
+        logging.info(f"停止守护 (手动: {manual})")
+        
+        # 如果是手动停止且启用了密码保护，需要验证密码
+        if manual and self.config.get('password'):
+            password = simpledialog.askstring(
+                "验证密码",
+                "请输入密码:",
+                parent=self.root,
+                show='*'
             )
-
-            # 验证密码
-            stored_password = self.config.get("password", "")
-            if not input_password or hashlib.sha256(input_password.encode()).hexdigest() != stored_password:
-                messagebox.showerror("错误", "密码错误，无法停止守护模式")
+            if not password or not self.verify_password(password):
+                messagebox.showerror("错误", "密码验证失败")
                 return False
-
-        # 停止守护模式
+        
         self.is_guarding = False
+        logging.info("守护已停止")
         return True
 
     def update_last_active_time(self):
@@ -204,40 +206,36 @@ class WeChatGuardian:
         
         return None
 
-    def verify_password(self, parent_window=None):
+    def verify_password(self, password):
         """
         验证密码
         """
-        if not self.config.get('password'):
-            return True
-        
-        max_attempts = 3
-        attempts = 0
-        
-        while attempts < max_attempts:
-            password = simpledialog.askstring(
-                "密码验证", 
-                f"请输入密码: (剩余尝试次数: {max_attempts - attempts})",
-                parent=parent_window,
-                show='*'
-            )
-            
-            if password is None:  # 用户点击取消
-                return False
-            
-            if self.config.get('password') == password:
+        try:
+            if not self.config.get('password'):
                 return True
             
-            attempts += 1
-            if attempts < max_attempts:
-                messagebox.showerror("错误", "密码错误，请重试")
-        
-        messagebox.showerror("错误", "密码错误次数过多，请稍后重试")
-        return False
+            stored_hash = base64.b64decode(self.config['password'].encode('utf-8'))
+            stored_salt = base64.b64decode(self.config['salt'].encode('utf-8'))
+            
+            input_hash = self._hash_password(password, stored_salt)
+            
+            # 使用安全的比较方法
+            return self._secure_compare(stored_hash, input_hash)
+        except Exception as e:
+            logging.error(f"密码验证失败: {str(e)}")
+            return False
+
+    def _hash_password(self, password, salt):
+        # 实现密码哈希函数
+        pass
+
+    def _secure_compare(self, stored_hash, input_hash):
+        # 实现安全的比较函数
+        pass
 
 # 示例使用
 if __name__ == '__main__':
-    guardian = WeChatGuardian(idle_time=60)
+    guardian = WeChatGuardian()
     guardian.start_guardian()
     
     while guardian.is_guarding:

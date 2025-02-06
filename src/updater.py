@@ -4,10 +4,11 @@ import logging
 import webbrowser
 from tkinter import messagebox
 from packaging import version
+import threading
 
 class Updater:
     def __init__(self):
-        self.current_version = "0.3.0"  # 更新版本号
+        self.current_version = "0.3.4"  # 更新版本号
         self.github_api = "https://api.github.com/repos/flyhunterl/wechatguard/releases/latest"
         self.github_releases = "https://github.com/flyhunterl/wechatguard/releases/latest"
 
@@ -56,9 +57,28 @@ def check_update_async(root):
     """
     异步检查更新
     """
-    def check():
-        updater = Updater()
-        updater.show_update_dialog()
+    def check_update():
+        try:
+            # 当前版本
+            current_version = "0.3.4"  # 更新当前版本号
+            
+            # 获取最新版本
+            response = requests.get(
+                "https://raw.githubusercontent.com/flyhunterl/wechatguard/main/version.txt",
+                timeout=5
+            )
+            latest_version = response.text.strip()
+            
+            # 比较版本号
+            if version.parse(latest_version) > version.parse(current_version):
+                if messagebox.askyesno(
+                    "发现新版本", 
+                    f"当前版本：{current_version}\n" +
+                    f"最新版本：{latest_version}\n\n" +
+                    "是否前往下载？"
+                ):
+                    webbrowser.open("https://github.com/flyhunterl/wechatguard/releases")
+        except Exception as e:
+            logging.error(f"检查更新失败: {str(e)}")
     
-    # 延迟3秒后检查更新，避免影响程序启动速度
-    root.after(3000, check) 
+    threading.Thread(target=check_update, daemon=True).start() 
