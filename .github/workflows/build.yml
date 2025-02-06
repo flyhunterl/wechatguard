@@ -28,7 +28,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller pillow pywin32 pyautogui PyQt5 mouseinfo psutil requests packaging certifi idna urllib3 chardet
+        pip install pyinstaller pillow pywin32 pyautogui PyQt5 mouseinfo psutil requests packaging certifi idna urllib3 chardet win32gui win32con win32api win32process pygetwindow pymsgbox pytweening pyscreeze
         
     - name: Generate icon
       run: |
@@ -40,7 +40,7 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt --add-data "src;src" src/main.py --hidden-import win32gui --hidden-import win32con --hidden-import PyQt5 --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui --hidden-import PIL --hidden-import PIL._imaging --hidden-import PIL.Image --hidden-import PIL.ImageDraw --hidden-import PIL.ImageFont --hidden-import pyautogui --hidden-import pygetwindow --hidden-import pymsgbox --hidden-import pytweening --hidden-import pyscreeze --hidden-import mouseinfo --hidden-import psutil --hidden-import requests --hidden-import packaging --hidden-import certifi --hidden-import idna --hidden-import urllib3 --hidden-import chardet
+        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt --add-data "src;src" src/main.py --hidden-import win32gui --hidden-import win32con --hidden-import win32api --hidden-import win32process --hidden-import PyQt5 --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui --hidden-import PIL --hidden-import PIL._imaging --hidden-import PIL.Image --hidden-import PIL.ImageDraw --hidden-import PIL.ImageFont --hidden-import pyautogui --hidden-import pygetwindow --hidden-import pymsgbox --hidden-import pytweening --hidden-import pyscreeze --hidden-import mouseinfo --hidden-import psutil --hidden-import requests --hidden-import packaging --hidden-import certifi --hidden-import idna --hidden-import urllib3 --hidden-import chardet --hidden-import win32com --hidden-import win32com.client --hidden-import tkinter --hidden-import tkinter.messagebox --hidden-import tkinter.ttk --hidden-import json --hidden-import json.decoder --hidden-import json.encoder --hidden-import threading --hidden-import queue --hidden-import time --hidden-import os --hidden-import sys --hidden-import logging --hidden-import webbrowser
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
@@ -55,5 +55,5 @@ jobs:
         body: |
           ## 更新内容
           - 添加自动更新检查功能
-          - 修复依赖和导入问题
+          - 修复所有依赖和导入问题
           - 改进打包配置
