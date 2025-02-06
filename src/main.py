@@ -24,11 +24,13 @@ logging.basicConfig(
 logging.info("程序启动")
 
 # 添加项目根目录到 Python 路径
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.dirname(current_dir)
+sys.path.insert(0, root_dir)
 
-from .settings import GuardianSettings  # 使用相对导入
-from .wechat_guardian import WeChatGuardian
-from .icon_generator import IconGenerator
+from src.icon_generator import IconGenerator
+from src.wechat_guardian import WeChatGuardian
+from src.settings import GuardianSettings
 from src.help_window import HelpWindow
 
 class WeChatGuardianApp:

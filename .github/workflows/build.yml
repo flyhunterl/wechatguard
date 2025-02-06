@@ -24,7 +24,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller pillow pywin32 pyautogui PyQt5  # 添加 PyQt5
+        pip install pyinstaller pillow pywin32 pyautogui PyQt5
         
     - name: Generate icon
       run: |
@@ -36,7 +36,7 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt --paths src src/main.py --hidden-import win32gui --hidden-import win32con --hidden-import PyQt5 --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui
+        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt --add-data "src;src" src/main.py --hidden-import win32gui --hidden-import win32con --hidden-import PyQt5 --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
