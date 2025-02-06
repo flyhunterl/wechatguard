@@ -3,8 +3,8 @@ name: Build WeChatGuard Executable
 on:
   push:
     tags:
-      - 'v*'  # 当推送版本标签时触发
-  workflow_dispatch:  # 允许手动触发工作流
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -32,6 +32,7 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
     
     - name: Generate version_info.txt
+      shell: pwsh
       run: |
         $version = "${{ steps.get_version.outputs.VERSION }}"
         $version_parts = $version -replace '^v', '' -split '\.'
