@@ -36,7 +36,7 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt --add-data "src;src" src/main.py --hidden-import win32gui --hidden-import win32con --hidden-import PyQt5 --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui --hidden-import PIL --hidden-import PIL._imaging --hidden-import PIL.Image --hidden-import PIL.ImageDraw --hidden-import PIL.ImageFont --hidden-import pyautogui --hidden-import pygetwindow --hidden-import pymsgbox --hidden-import pytweening --hidden-import pyscreeze --hidden-import mouseinfo --hidden-import psutil
+        pyinstaller --onefile --windowed --icon=src/icon/app_icon.ico --name="WeChatGuard_${{ github.ref_name }}" --version-file=version_info.txt --add-data "src;src" src/main.py --hidden-import win32gui --hidden-import win32con --hidden-import PyQt5 --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui --hidden-import PIL --hidden-import PIL._imaging --hidden-import PIL.Image --hidden-import PIL.ImageDraw --hidden-import PIL.ImageFont --hidden-import pyautogui --hidden-import pygetwindow --hidden-import pymsgbox --hidden-import pytweening --hidden-import pyscreeze --hidden-import mouseinfo --hidden-import psutil --hidden-import win32process --hidden-import win32api --hidden-import win32com.client
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
@@ -50,5 +50,5 @@ jobs:
           - 第一个独立运行版本
           - 无需 Python 环境
           - 新增自动监控系统空闲时间
-          - 修复依赖和导入问题（PIL、PyAutoGUI、psutil）
+          - 修复依赖和导入问题（PIL、PyAutoGUI、psutil、win32process）
           - 改进打包配置
