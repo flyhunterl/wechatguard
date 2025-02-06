@@ -146,23 +146,31 @@ class WeChatGuardianApp:
         停止守护模式
         """
         logging.info("停止守护模式")
-        self.guardian.stop_guardian()
         
-        # 恢复灰色图标
-        temp_icon_path = os.path.join(os.path.dirname(__file__), 'temp_gray_icon.ico')
-        self.gray_icon.save(temp_icon_path, format='ICO', sizes=[(16, 16)])
-        hicon = win32gui.LoadImage(
-            0, 
-            temp_icon_path, 
-            win32con.IMAGE_ICON, 
-            16, 16, 
-            win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTCOLOR
-        )
-        os.remove(temp_icon_path)
+        # 创建一个临时的 Tk 窗口用于密码验证
+        root = tk.Tk()
+        root.withdraw()  # 隐藏主窗口
         
-        flags = win32gui.NIF_ICON
-        nid = (self.hwnd, 0, flags, self.WM_TRAYICON, hicon)
-        win32gui.Shell_NotifyIcon(win32gui.NIM_MODIFY, nid)
+        # 尝试停止守护模式，传入父窗口
+        if self.guardian.stop_guardian(parent_window=root):
+            # 恢复灰色图标
+            temp_icon_path = os.path.join(os.path.dirname(__file__), 'temp_gray_icon.ico')
+            self.gray_icon.save(temp_icon_path, format='ICO', sizes=[(16, 16)])
+            hicon = win32gui.LoadImage(
+                0, 
+                temp_icon_path, 
+                win32con.IMAGE_ICON, 
+                16, 16, 
+                win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTCOLOR
+            )
+            os.remove(temp_icon_path)
+            
+            flags = win32gui.NIF_ICON
+            nid = (self.hwnd, 0, flags, self.WM_TRAYICON, hicon)
+            win32gui.Shell_NotifyIcon(win32gui.NIM_MODIFY, nid)
+            
+            # 关闭临时窗口
+            root.destroy()
 
     def open_settings(self):
         """
